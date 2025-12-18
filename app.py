@@ -1,9 +1,9 @@
 import streamlit as st
 import plotly.graph_objects as go
 import random
-import math
+import time
 
-st.set_page_config(page_title="Smooth Wheel of Names", layout="wide")
+st.set_page_config(page_title="Wheel of Names", layout="wide")
 
 # ======================
 # SESSION STATE
@@ -13,6 +13,9 @@ if "names" not in st.session_state:
 
 if "colors" not in st.session_state:
     st.session_state.colors = []
+
+if "angle" not in st.session_state:
+    st.session_state.angle = 0.0
 
 # ======================
 # SIDEBAR
@@ -38,110 +41,82 @@ if st.session_state.names:
 start = st.sidebar.button("🎡 START")
 
 # ======================
-# DRAW BASE WHEEL
+# DRAW WHEEL
 # ======================
-def base_wheel(rotation=0):
-    return go.Figure(
-        data=[
-            go.Pie(
-                labels=st.session_state.names,
-                values=[1] * len(st.session_state.names),
-                rotation=rotation,
-                direction="clockwise",
-                sort=False,
-                hole=0.35,
-                marker=dict(colors=st.session_state.colors),
-                textinfo="label",
-                textfont=dict(size=18),
-            )
-        ],
-        layout=go.Layout(
-            showlegend=False,
-            height=650,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            margin=dict(t=40, b=40),
-            annotations=[
-                dict(
-                    x=0.5,
-                    y=1.12,
-                    text="▼",
-                    showarrow=False,
-                    font=dict(size=40, color="red")
-                )
-            ]
+def draw_wheel(rotation):
+    fig = go.Figure(
+        go.Pie(
+            labels=st.session_state.names,
+            values=[1] * len(st.session_state.names),
+            rotation=rotation,
+            direction="clockwise",
+            sort=False,
+            hole=0.35,
+            marker=dict(colors=st.session_state.colors),
+            textinfo="label",
+            textfont=dict(size=18),
         )
     )
+
+    fig.update_layout(
+        showlegend=False,
+        height=650,
+        margin=dict(t=40, b=40, l=40, r=40),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        annotations=[
+            dict(
+                x=0.5,
+                y=1.12,
+                text="▼",
+                showarrow=False,
+                font=dict(size=40, color="red")
+            )
+        ]
+    )
+    return fig
 
 # ======================
 # MAIN
 # ======================
-st.title("🎡 Smooth Wheel of Names")
+st.title("🎡 Wheel of Names")
 
 if len(st.session_state.names) < 2:
     st.info("Masukkan minimal 2 nama")
     st.stop()
 
-fig = base_wheel()
+wheel = st.empty()
+wheel.plotly_chart(draw_wheel(st.session_state.angle), use_container_width=True)
 
 # ======================
-# BUILD ANIMATION FRAMES
+# SPIN LOGIC
 # ======================
 if start:
-    frames = []
-    angle = 0
-    speed = random.uniform(35, 45)
+    speed = random.uniform(40, 50)
 
-    while speed > 0.6:
-        angle += speed
-        speed *= 0.97
+    while speed > 0.8:
+        st.session_state.angle += speed
+        speed *= 0.965
 
-        if speed < 3:
-            angle += random.uniform(-0.6, 0.6)
+        # subtle jitter near end
+        if speed < 4:
+            st.session_state.angle += random.uniform(-0.8, 0.8)
 
-        frames.append(
-            go.Frame(
-                data=[go.Pie(rotation=angle)]
-            )
+        wheel.plotly_chart(
+            draw_wheel(st.session_state.angle),
+            use_container_width=True
         )
-
-    fig.frames = frames
-
-    fig.update_layout(
-        updatemenus=[
-            dict(
-                type="buttons",
-                showactive=False,
-                buttons=[
-                    dict(
-                        label="Spin",
-                        method="animate",
-                        args=[
-                            None,
-                            dict(
-                                frame=dict(duration=30, redraw=False),
-                                transition=dict(duration=0),
-                                fromcurrent=True,
-                            ),
-                        ],
-                    )
-                ],
-            )
-        ]
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
+        time.sleep(0.03)
 
     # ======================
-    # FINAL RESULT
+    # FINAL PICK (50/50)
     # ======================
     step = 360 / len(st.session_state.names)
-    idx = int((-angle % 360) / step)
+    idx = int((-st.session_state.angle % 360) / step)
+
     if random.choice([True, False]):
         idx = (idx + 1) % len(st.session_state.names)
 
+    winner = st.session_state.names[idx]
     st.balloons()
-    st.success(f"🏆 PEMENANG: **{st.session_state.names[idx]}**")
-
-else:
-    st.plotly_chart(fig, use_container_width=True)
+    st.success(f"🏆 PEMENANG: **{winner}**")
