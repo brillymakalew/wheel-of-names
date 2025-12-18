@@ -11,18 +11,30 @@ st.set_page_config(page_title="Wheel of Names", layout="wide")
 if "names" not in st.session_state:
     st.session_state.names = []
 
+if "colors" not in st.session_state:
+    st.session_state.colors = []
+
 if "angle" not in st.session_state:
     st.session_state.angle = 0.0
 
+if "spinning" not in st.session_state:
+    st.session_state.spinning = False
+
 # ======================
-# SIDEBAR UI
+# SIDEBAR
 # ======================
 st.sidebar.title("🎛️ Control Panel")
 
-new_name = st.sidebar.text_input("Tambah Nama")
+name = st.sidebar.text_input("Tambah Nama")
 if st.sidebar.button("➕ Tambah"):
-    if new_name:
-        st.session_state.names.append(new_name)
+    if name:
+        st.session_state.names.append(name)
+        st.session_state.colors.append(
+            random.choice([
+                "#ff595e", "#ffca3a", "#8ac926",
+                "#1982c4", "#6a4c93"
+            ])
+        )
 
 if st.session_state.names:
     st.sidebar.markdown("### 📋 Daftar Nama")
@@ -32,26 +44,18 @@ if st.session_state.names:
 start = st.sidebar.button("🎡 START")
 
 # ======================
-# DRAW WHEEL
+# DRAW WHEEL (NO RANDOM!)
 # ======================
 def draw_wheel(rotation):
-    labels = st.session_state.names
-    values = [1] * len(labels)
-
-    colors = [
-        "#ff595e", "#ffca3a", "#8ac926",
-        "#1982c4", "#6a4c93"
-    ]
-
     fig = go.Figure(
         go.Pie(
-            labels=labels,
-            values=values,
+            labels=st.session_state.names,
+            values=[1] * len(st.session_state.names),
             rotation=rotation,
-            hole=0.35,
             direction="clockwise",
             sort=False,
-            marker=dict(colors=colors * 10),
+            hole=0.35,
+            marker=dict(colors=st.session_state.colors),
             textinfo="label",
             textfont=dict(size=18),
         )
@@ -84,39 +88,46 @@ if len(st.session_state.names) < 2:
     st.info("Masukkan minimal 2 nama")
     st.stop()
 
-placeholder = st.empty()
-placeholder.plotly_chart(draw_wheel(st.session_state.angle), use_container_width=True)
+wheel = st.empty()
 
 # ======================
-# SPIN LOGIC (FAST & SMOOTH)
+# IDLE ROTATION (SLOW)
+# ======================
+if not start and not st.session_state.spinning:
+    st.session_state.angle += 0.25
+    wheel.plotly_chart(draw_wheel(st.session_state.angle), use_container_width=True)
+    time.sleep(0.05)
+    st.experimental_rerun()
+
+# ======================
+# SPIN LOGIC (FAST → SLOW)
 # ======================
 if start:
-    speed = random.uniform(35, 45)
+    st.session_state.spinning = True
+    speed = random.uniform(40, 50)
 
     while speed > 0.8:
         st.session_state.angle += speed
-        speed *= 0.965  # DECELERATION
+        speed *= 0.965
 
-        # jitter dramatis di akhir
+        # subtle jitter near end
         if speed < 4:
-            st.session_state.angle += random.uniform(-1.2, 1.2)
+            st.session_state.angle += random.uniform(-0.8, 0.8)
 
-        placeholder.plotly_chart(
-            draw_wheel(st.session_state.angle),
-            use_container_width=True
-        )
+        wheel.plotly_chart(draw_wheel(st.session_state.angle), use_container_width=True)
         time.sleep(0.03)
 
+    st.session_state.spinning = False
+
     # ======================
-    # FINAL PICK (50–50 DRAMA)
+    # FINAL PICK (50/50)
     # ======================
     step = 360 / len(st.session_state.names)
-    index = int((-st.session_state.angle % 360) / step)
+    idx = int((-st.session_state.angle % 360) / step)
 
     if random.choice([True, False]):
-        index = (index + 1) % len(st.session_state.names)
+        idx = (idx + 1) % len(st.session_state.names)
 
-    winner = st.session_state.names[index]
-
+    winner = st.session_state.names[idx]
     st.balloons()
     st.success(f"🏆 PEMENANG: **{winner}**")
