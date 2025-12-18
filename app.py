@@ -17,6 +17,9 @@ if "colors" not in st.session_state:
 if "angle" not in st.session_state:
     st.session_state.angle = 0.0
 
+if "spinning" not in st.session_state:
+    st.session_state.spinning = False
+
 # ======================
 # SIDEBAR
 # ======================
@@ -41,7 +44,7 @@ if st.session_state.names:
 start = st.sidebar.button("🎡 START")
 
 # ======================
-# DRAW WHEEL
+# DRAW WHEEL (NO RANDOM!)
 # ======================
 def draw_wheel(rotation):
     fig = go.Figure(
@@ -86,12 +89,21 @@ if len(st.session_state.names) < 2:
     st.stop()
 
 wheel = st.empty()
-wheel.plotly_chart(draw_wheel(st.session_state.angle), use_container_width=True)
 
 # ======================
-# SPIN LOGIC
+# IDLE ROTATION (SLOW)
+# ======================
+if not start and not st.session_state.spinning:
+    st.session_state.angle += 0.25
+    wheel.plotly_chart(draw_wheel(st.session_state.angle), use_container_width=True)
+    time.sleep(0.05)
+    st.rerun()
+
+# ======================
+# SPIN LOGIC (FAST → SLOW)
 # ======================
 if start:
+    st.session_state.spinning = True
     speed = random.uniform(40, 50)
 
     while speed > 0.8:
@@ -102,11 +114,10 @@ if start:
         if speed < 4:
             st.session_state.angle += random.uniform(-0.8, 0.8)
 
-        wheel.plotly_chart(
-            draw_wheel(st.session_state.angle),
-            use_container_width=True
-        )
+        wheel.plotly_chart(draw_wheel(st.session_state.angle), use_container_width=True)
         time.sleep(0.03)
+
+    st.session_state.spinning = False
 
     # ======================
     # FINAL PICK (50/50)
