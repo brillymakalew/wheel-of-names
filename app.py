@@ -97,7 +97,7 @@ if not start and not st.session_state.spinning:
     st.session_state.angle += 0.25
     wheel.plotly_chart(draw_wheel(st.session_state.angle), use_container_width=True)
     time.sleep(0.05)
-    st.experimental_rerun()
+    st.rerun()
 
 # ======================
 # SPIN LOGIC (FAST → SLOW)
